@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { supabase } from "@/lib/supabaseClient"
 
 export type Product = {
   id: string
@@ -232,64 +233,222 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [contacts, setContacts] = useState<ContactMessage[]>([])
   const [settings, setSettings] = useState<SiteSettings>(initialSettings)
   const [isHydrated, setIsHydrated] = useState(false)
+  const [isUsingSupabase, setIsUsingSupabase] = useState(false)
 
-  // Load from localStorage on mount
   useEffect(() => {
-    try {
-      const storedProducts = localStorage.getItem(STORAGE_KEYS.products)
-      const storedQuotes = localStorage.getItem(STORAGE_KEYS.quotes)
-      const storedContacts = localStorage.getItem(STORAGE_KEYS.contacts)
-      const storedSettings = localStorage.getItem(STORAGE_KEYS.settings)
+    const loadFromLocalStorage = () => {
+      try {
+        const storedProducts = localStorage.getItem(STORAGE_KEYS.products)
+        const storedQuotes = localStorage.getItem(STORAGE_KEYS.quotes)
+        const storedContacts = localStorage.getItem(STORAGE_KEYS.contacts)
+        const storedSettings = localStorage.getItem(STORAGE_KEYS.settings)
 
-      if (storedProducts) setProducts(JSON.parse(storedProducts))
-      if (storedQuotes) setQuotes(JSON.parse(storedQuotes))
-      if (storedContacts) setContacts(JSON.parse(storedContacts))
-      if (storedSettings) setSettings(JSON.parse(storedSettings))
-    } catch (error) {
-      console.error("Error loading from localStorage:", error)
+        if (storedProducts) setProducts(JSON.parse(storedProducts))
+        if (storedQuotes) setQuotes(JSON.parse(storedQuotes))
+        if (storedContacts) setContacts(JSON.parse(storedContacts))
+        if (storedSettings) setSettings(JSON.parse(storedSettings))
+      } catch (error) {
+        console.error("Error loading from localStorage:", error)
+      }
+      setIsHydrated(true)
     }
-    setIsHydrated(true)
+
+    const loadFromSupabase = async () => {
+      if (!supabase) {
+        loadFromLocalStorage()
+        return
+      }
+
+      try {
+        const [productsResult, quotesResult, contactsResult, settingsResult] = await Promise.all([
+          supabase.from("products").select("*").order("created_at", { ascending: true }),
+          supabase.from("quotes").select("*").order("created_at", { ascending: false }),
+          supabase.from("contacts").select("*").order("created_at", { ascending: false }),
+          supabase.from("settings").select("*").limit(1).maybeSingle(),
+        ])
+
+        const productsData = productsResult.data ?? []
+        const quotesData = quotesResult.data ?? []
+        const contactsData = contactsResult.data ?? []
+        const settingsData = settingsResult.data
+
+        if (productsData.length > 0) {
+          setProducts(
+            productsData.map((row: any) => ({
+              id: String(row.id),
+              name: row.name ?? "",
+              category: row.category ?? "",
+              subcategory: row.subcategory ?? "",
+              description: row.description ?? "",
+              specifications: row.specifications ?? [],
+              images: row.images ?? [],
+              featured: Boolean(row.featured),
+              createdAt:
+                row.created_at ??
+                row.createdAt ??
+                new Date().toISOString().split("T")[0],
+            })),
+          )
+        }
+
+        if (quotesData.length > 0) {
+          setQuotes(
+            quotesData.map((row: any) => ({
+              id: String(row.id),
+              name: row.name ?? "",
+              email: row.email ?? "",
+              phone: row.phone ?? "",
+              company: row.company ?? "",
+              productId: String(row.product_id ?? row.productId ?? ""),
+              productName: row.product_name ?? row.productName ?? "",
+              message: row.message ?? "",
+              status: row.status ?? "pending",
+              createdAt:
+                row.created_at ??
+                row.createdAt ??
+                new Date().toISOString().split("T")[0],
+            })),
+          )
+        }
+
+        if (contactsData.length > 0) {
+          setContacts(
+            contactsData.map((row: any) => ({
+              id: String(row.id),
+              firstName: row.first_name ?? row.firstName ?? "",
+              lastName: row.last_name ?? row.lastName ?? "",
+              email: row.email ?? "",
+              phone: row.phone ?? "",
+              company: row.company ?? "",
+              message: row.message ?? "",
+              status: row.status ?? "new",
+              createdAt:
+                row.created_at ??
+                row.createdAt ??
+                new Date().toISOString().split("T")[0],
+            })),
+          )
+        }
+
+        if (settingsData) {
+          setSettings({
+            email: settingsData.email ?? initialSettings.email,
+            phone: settingsData.phone ?? initialSettings.phone,
+            address: settingsData.address ?? initialSettings.address,
+            businessHours:
+              settingsData.business_hours ??
+              settingsData.businessHours ??
+              initialSettings.businessHours,
+          })
+        }
+
+        setIsUsingSupabase(true)
+        setIsHydrated(true)
+      } catch (error) {
+        console.error("Error loading from Supabase:", error)
+        loadFromLocalStorage()
+      }
+    }
+
+    loadFromSupabase()
   }, [])
 
-  // Save to localStorage on changes
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && !isUsingSupabase) {
       localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products))
     }
-  }, [products, isHydrated])
+  }, [products, isHydrated, isUsingSupabase])
 
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && !isUsingSupabase) {
       localStorage.setItem(STORAGE_KEYS.quotes, JSON.stringify(quotes))
     }
-  }, [quotes, isHydrated])
+  }, [quotes, isHydrated, isUsingSupabase])
 
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && !isUsingSupabase) {
       localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts))
     }
-  }, [contacts, isHydrated])
+  }, [contacts, isHydrated, isUsingSupabase])
 
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && !isUsingSupabase) {
       localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings))
     }
-  }, [settings, isHydrated])
+  }, [settings, isHydrated, isUsingSupabase])
 
   const addProduct = (product: Omit<Product, "id">) => {
-    const newProduct = {
+    const newProduct: Product = {
       ...product,
       id: String(Date.now()),
     }
     setProducts((prev) => [...prev, newProduct])
+
+    if (supabase) {
+      const dbProduct = {
+        id: newProduct.id,
+        name: newProduct.name,
+        category: newProduct.category,
+        subcategory: newProduct.subcategory,
+        description: newProduct.description,
+        specifications: newProduct.specifications,
+        images: newProduct.images,
+        featured: newProduct.featured,
+        created_at: newProduct.createdAt,
+      }
+
+      supabase
+        .from("products")
+        .insert(dbProduct)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error inserting product into Supabase:", error)
+          }
+        })
+    }
   }
 
   const updateProduct = (product: Product) => {
     setProducts((prev) => prev.map((p) => (p.id === product.id ? product : p)))
+
+    if (supabase) {
+      const dbProduct = {
+        name: product.name,
+        category: product.category,
+        subcategory: product.subcategory,
+        description: product.description,
+        specifications: product.specifications,
+        images: product.images,
+        featured: product.featured,
+        created_at: product.createdAt,
+      }
+
+      supabase
+        .from("products")
+        .update(dbProduct)
+        .eq("id", product.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error updating product in Supabase:", error)
+          }
+        })
+    }
   }
 
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id))
+
+    if (supabase) {
+      supabase
+        .from("products")
+        .delete()
+        .eq("id", id)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error deleting product from Supabase:", error)
+          }
+        })
+    }
   }
 
   const addQuote = (quote: Omit<QuoteRequest, "id" | "createdAt" | "status">) => {
@@ -300,10 +459,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString().split("T")[0],
     }
     setQuotes((prev) => [newQuote, ...prev])
+
+    if (supabase) {
+      const dbQuote = {
+        id: newQuote.id,
+        name: newQuote.name,
+        email: newQuote.email,
+        phone: newQuote.phone,
+        company: newQuote.company,
+        product_id: newQuote.productId,
+        product_name: newQuote.productName,
+        message: newQuote.message,
+        status: newQuote.status,
+        created_at: newQuote.createdAt,
+      }
+
+      supabase
+        .from("quotes")
+        .insert(dbQuote)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error inserting quote into Supabase:", error)
+          }
+        })
+    }
   }
 
   const updateQuoteStatus = (id: string, status: QuoteRequest["status"]) => {
     setQuotes((prev) => prev.map((q) => (q.id === id ? { ...q, status } : q)))
+
+    if (supabase) {
+      supabase
+        .from("quotes")
+        .update({ status })
+        .eq("id", id)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error updating quote status in Supabase:", error)
+          }
+        })
+    }
   }
 
   const addContact = (contact: Omit<ContactMessage, "id" | "createdAt" | "status">) => {
@@ -314,14 +509,67 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString().split("T")[0],
     }
     setContacts((prev) => [newContact, ...prev])
+
+    if (supabase) {
+      const dbContact = {
+        id: newContact.id,
+        first_name: newContact.firstName,
+        last_name: newContact.lastName,
+        email: newContact.email,
+        phone: newContact.phone,
+        company: newContact.company,
+        message: newContact.message,
+        status: newContact.status,
+        created_at: newContact.createdAt,
+      }
+
+      supabase
+        .from("contacts")
+        .insert(dbContact)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error inserting contact into Supabase:", error)
+          }
+        })
+    }
   }
 
   const updateContactStatus = (id: string, status: ContactMessage["status"]) => {
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)))
+
+    if (supabase) {
+      supabase
+        .from("contacts")
+        .update({ status })
+        .eq("id", id)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error updating contact status in Supabase:", error)
+          }
+        })
+    }
   }
 
   const updateSettings = (newSettings: SiteSettings) => {
     setSettings(newSettings)
+
+    if (supabase) {
+      const dbSettings = {
+        email: newSettings.email,
+        phone: newSettings.phone,
+        address: newSettings.address,
+        business_hours: newSettings.businessHours,
+      }
+
+      supabase
+        .from("settings")
+        .upsert({ id: "default", ...dbSettings })
+        .then(({ error }) => {
+          if (error) {
+            console.error("Error updating settings in Supabase:", error)
+          }
+        })
+    }
   }
 
   return (

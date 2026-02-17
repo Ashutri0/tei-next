@@ -280,7 +280,7 @@ export default function QuotePage() {
                         <div className="flex gap-4">
                           <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted shrink-0">
                             <img
-                              src={product.image || "/placeholder.svg"}
+                              src={product.images[0] || "/placeholder.svg"}
                               alt={product.name}
                               className="h-full w-full object-cover"
                             />
