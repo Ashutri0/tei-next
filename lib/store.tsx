@@ -273,6 +273,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const contactsData = contactsResult.data ?? []
         const settingsData = settingsResult.data
 
+        // Only update state if we have data from Supabase, otherwise keep initial data
         if (productsData.length > 0) {
           setProducts(
             productsData.map((row: any) => ({
@@ -290,6 +291,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 new Date().toISOString().split("T")[0],
             })),
           )
+        } else {
+          console.log("🔍 No products in Supabase, using initial data")
         }
 
         if (quotesData.length > 0) {
@@ -310,6 +313,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 new Date().toISOString().split("T")[0],
             })),
           )
+        } else {
+          console.log("🔍 No quotes in Supabase, using initial data")
         }
 
         if (contactsData.length > 0) {
@@ -329,6 +334,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 new Date().toISOString().split("T")[0],
             })),
           )
+        } else {
+          console.log("🔍 No contacts in Supabase, using initial data")
         }
 
         if (settingsData) {
@@ -341,6 +348,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               settingsData.businessHours ??
               initialSettings.businessHours,
           })
+        } else {
+          console.log("🔍 No settings in Supabase, using initial data")
         }
 
         setIsUsingSupabase(true)
@@ -362,7 +371,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     console.log("🔍 Adding product:", newProduct.name)
     setProducts((prev) => [...prev, newProduct])
 
-    if (supabase) {
+    if (supabase && isUsingSupabase) {
       console.log("🔍 Saving product to Supabase...")
       const dbProduct = {
         id: newProduct.id,
@@ -387,14 +396,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
         })
     } else {
-      console.error("❌ Cannot save product - Supabase not available")
+      console.error("❌ Cannot save product - Supabase not available or not connected")
     }
   }
 
   const updateProduct = (product: Product) => {
     setProducts((prev) => prev.map((p) => (p.id === product.id ? product : p)))
 
-    if (supabase) {
+    if (supabase && isUsingSupabase) {
       const dbProduct = {
         name: product.name,
         category: product.category,
@@ -421,7 +430,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id))
 
-    if (supabase) {
+    if (supabase && isUsingSupabase) {
       supabase
         .from("products")
         .delete()
@@ -444,7 +453,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     console.log("🔍 Adding quote from:", newQuote.name)
     setQuotes((prev) => [newQuote, ...prev])
 
-    if (supabase) {
+    if (supabase && isUsingSupabase) {
       console.log("🔍 Saving quote to Supabase...")
       const dbQuote = {
         id: newQuote.id,
@@ -477,7 +486,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const updateQuoteStatus = (id: string, status: QuoteRequest["status"]) => {
     setQuotes((prev) => prev.map((q) => (q.id === id ? { ...q, status } : q)))
 
-    if (supabase) {
+    if (supabase && isUsingSupabase) {
       supabase
         .from("quotes")
         .update({ status })
@@ -500,7 +509,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     console.log("🔍 Adding contact from:", newContact.firstName + " " + newContact.lastName)
     setContacts((prev) => [newContact, ...prev])
 
-    if (supabase) {
+    if (supabase && isUsingSupabase) {
       console.log("🔍 Saving contact to Supabase...")
       const dbContact = {
         id: newContact.id,
@@ -532,7 +541,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const updateContactStatus = (id: string, status: ContactMessage["status"]) => {
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)))
 
-    if (supabase) {
+    if (supabase && isUsingSupabase) {
       supabase
         .from("contacts")
         .update({ status })
@@ -548,7 +557,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const updateSettings = (newSettings: SiteSettings) => {
     setSettings(newSettings)
 
-    if (supabase) {
+    if (supabase && isUsingSupabase) {
       const dbSettings = {
         email: newSettings.email,
         phone: newSettings.phone,
