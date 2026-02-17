@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Lock } from "lucide-react"
+import NextImage from "next/image"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -39,9 +40,18 @@ export default function AdminLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-md border-border/50">
+        {/* Removed the incorrect import statement from here */}
+
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Lock className="h-6 w-6 text-primary" />
+          <div className="mx-auto mb-6 flex justify-center">
+            <NextImage
+              src="/tei-logo.png"
+              alt="TEI Logo"
+              width={140}
+              height={48}
+              className="h-12 w-auto object-contain"
+              priority
+            />
           </div>
           <CardTitle className="text-2xl">Admin Login</CardTitle>
           <CardDescription>Sign in to access the TEI admin panel</CardDescription>

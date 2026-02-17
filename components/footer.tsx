@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Mail, Phone, MapPin } from "lucide-react"
 import { useStore } from "@/lib/store"
+import NextImage from "next/image"
 
 export function Footer() {
   const { settings } = useStore()
@@ -13,9 +14,15 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           {/* Company Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-foreground">
-              TEI<span className="text-primary">.</span>
-            </h3>
+            <Link href="/" className="block">
+              <NextImage
+                src="/tei-logo.png"
+                alt="TEI Logo"
+                width={120}
+                height={40}
+                className="h-10 w-auto"
+              />
+            </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Thermal Energy International - Your trusted partner for mechanical, electrical, and automation solutions.
             </p>
