@@ -220,12 +220,6 @@ type StoreContextType = {
 
 const StoreContext = createContext<StoreContextType | null>(null)
 
-const STORAGE_KEYS = {
-  products: "tei_products",
-  quotes: "tei_quotes",
-  contacts: "tei_contacts",
-  settings: "tei_settings",
-}
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(initialProducts)
@@ -236,36 +230,43 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [isUsingSupabase, setIsUsingSupabase] = useState(false)
 
   useEffect(() => {
-    const loadFromLocalStorage = () => {
-      try {
-        const storedProducts = localStorage.getItem(STORAGE_KEYS.products)
-        const storedQuotes = localStorage.getItem(STORAGE_KEYS.quotes)
-        const storedContacts = localStorage.getItem(STORAGE_KEYS.contacts)
-        const storedSettings = localStorage.getItem(STORAGE_KEYS.settings)
-
-        if (storedProducts) setProducts(JSON.parse(storedProducts))
-        if (storedQuotes) setQuotes(JSON.parse(storedQuotes))
-        if (storedContacts) setContacts(JSON.parse(storedContacts))
-        if (storedSettings) setSettings(JSON.parse(storedSettings))
-      } catch (error) {
-        console.error("Error loading from localStorage:", error)
-      }
-      setIsHydrated(true)
-    }
-
     const loadFromSupabase = async () => {
+      console.log("🔍 Starting Supabase data load...")
+      console.log("🔍 Supabase client:", supabase ? "✅ Available" : "❌ Not available")
+      
       if (!supabase) {
-        loadFromLocalStorage()
+        console.error("❌ Supabase is not configured - check .env.local file")
+        console.log("❌ Required: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY")
+        setIsHydrated(true)
         return
       }
 
       try {
+        console.log("🔍 Fetching data from Supabase...")
         const [productsResult, quotesResult, contactsResult, settingsResult] = await Promise.all([
           supabase.from("products").select("*").order("created_at", { ascending: true }),
           supabase.from("quotes").select("*").order("created_at", { ascending: false }),
           supabase.from("contacts").select("*").order("created_at", { ascending: false }),
           supabase.from("settings").select("*").limit(1).maybeSingle(),
         ])
+
+        console.log("🔍 Products result:", productsResult.error ? "❌ Error" : `✅ ${productsResult.data?.length || 0} items`)
+        console.log("🔍 Quotes result:", quotesResult.error ? "❌ Error" : `✅ ${quotesResult.data?.length || 0} items`)
+        console.log("🔍 Contacts result:", contactsResult.error ? "❌ Error" : `✅ ${contactsResult.data?.length || 0} items`)
+        console.log("🔍 Settings result:", settingsResult.error ? "❌ Error" : "✅ Found")
+
+        if (productsResult.error) {
+          console.error("❌ Products error:", productsResult.error)
+        }
+        if (quotesResult.error) {
+          console.error("❌ Quotes error:", quotesResult.error)
+        }
+        if (contactsResult.error) {
+          console.error("❌ Contacts error:", contactsResult.error)
+        }
+        if (settingsResult.error) {
+          console.error("❌ Settings error:", settingsResult.error)
+        }
 
         const productsData = productsResult.data ?? []
         const quotesData = quotesResult.data ?? []
@@ -346,45 +347,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setIsHydrated(true)
       } catch (error) {
         console.error("Error loading from Supabase:", error)
-        loadFromLocalStorage()
+        setIsHydrated(true)
       }
     }
 
     loadFromSupabase()
   }, [])
 
-  useEffect(() => {
-    if (isHydrated && !isUsingSupabase) {
-      localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products))
-    }
-  }, [products, isHydrated, isUsingSupabase])
-
-  useEffect(() => {
-    if (isHydrated && !isUsingSupabase) {
-      localStorage.setItem(STORAGE_KEYS.quotes, JSON.stringify(quotes))
-    }
-  }, [quotes, isHydrated, isUsingSupabase])
-
-  useEffect(() => {
-    if (isHydrated && !isUsingSupabase) {
-      localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts))
-    }
-  }, [contacts, isHydrated, isUsingSupabase])
-
-  useEffect(() => {
-    if (isHydrated && !isUsingSupabase) {
-      localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings))
-    }
-  }, [settings, isHydrated, isUsingSupabase])
-
   const addProduct = (product: Omit<Product, "id">) => {
     const newProduct: Product = {
       ...product,
       id: String(Date.now()),
     }
+    console.log("🔍 Adding product:", newProduct.name)
     setProducts((prev) => [...prev, newProduct])
 
     if (supabase) {
+      console.log("🔍 Saving product to Supabase...")
       const dbProduct = {
         id: newProduct.id,
         name: newProduct.name,
@@ -402,9 +381,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .insert(dbProduct)
         .then(({ error }) => {
           if (error) {
-            console.error("Error inserting product into Supabase:", error)
+            console.error("❌ Error inserting product into Supabase:", error)
+          } else {
+            console.log("✅ Product successfully saved to Supabase")
           }
         })
+    } else {
+      console.error("❌ Cannot save product - Supabase not available")
     }
   }
 
@@ -458,9 +441,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: "pending",
       createdAt: new Date().toISOString().split("T")[0],
     }
+    console.log("🔍 Adding quote from:", newQuote.name)
     setQuotes((prev) => [newQuote, ...prev])
 
     if (supabase) {
+      console.log("🔍 Saving quote to Supabase...")
       const dbQuote = {
         id: newQuote.id,
         name: newQuote.name,
@@ -479,9 +464,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .insert(dbQuote)
         .then(({ error }) => {
           if (error) {
-            console.error("Error inserting quote into Supabase:", error)
+            console.error("❌ Error inserting quote into Supabase:", error)
+          } else {
+            console.log("✅ Quote successfully saved to Supabase")
           }
         })
+    } else {
+      console.error("❌ Cannot save quote - Supabase not available")
     }
   }
 
@@ -508,9 +497,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: "new",
       createdAt: new Date().toISOString().split("T")[0],
     }
+    console.log("🔍 Adding contact from:", newContact.firstName + " " + newContact.lastName)
     setContacts((prev) => [newContact, ...prev])
 
     if (supabase) {
+      console.log("🔍 Saving contact to Supabase...")
       const dbContact = {
         id: newContact.id,
         first_name: newContact.firstName,
@@ -528,9 +519,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .insert(dbContact)
         .then(({ error }) => {
           if (error) {
-            console.error("Error inserting contact into Supabase:", error)
+            console.error("❌ Error inserting contact into Supabase:", error)
+          } else {
+            console.log("✅ Contact successfully saved to Supabase")
           }
         })
+    } else {
+      console.error("❌ Cannot save contact - Supabase not available")
     }
   }
 
