@@ -3,6 +3,7 @@ const { createClient } = require("@supabase/supabase-js");
 
 // Load environment variables
 require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env' });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -21,14 +22,14 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 async function testConnection() {
   try {
     console.log('\n=== Testing Database Connection ===');
-    
+
     // Test 1: Read products
     console.log('1. Testing products table read...');
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('*')
       .limit(5);
-    
+
     if (productsError) {
       console.error('❌ Products read error:', productsError);
     } else {
@@ -44,7 +45,7 @@ async function testConnection() {
       .from('quotes')
       .select('*')
       .limit(5);
-    
+
     if (quotesError) {
       console.error('❌ Quotes read error:', quotesError);
     } else {
@@ -60,7 +61,7 @@ async function testConnection() {
       .from('settings')
       .select('*')
       .limit(1);
-    
+
     if (settingsError) {
       console.error('❌ Settings read error:', settingsError);
     } else {
@@ -93,7 +94,7 @@ async function testConnection() {
       console.error('❌ Product insertion error:', insertError);
     } else {
       console.log('✅ Successfully inserted test product');
-      
+
       // Clean up - delete the test product
       await supabase
         .from('products')
@@ -126,7 +127,7 @@ async function testConnection() {
       console.error('❌ Quote insertion error:', quoteInsertError);
     } else {
       console.log('✅ Successfully inserted test quote');
-      
+
       // Clean up - delete the test quote
       await supabase
         .from('quotes')
