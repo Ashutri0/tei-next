@@ -1,0 +1,6 @@
+# Create this file manually at: E:\download data\tei-next\.env.local
+# Copy and paste the content below into that file
+
+NEXT_PUBLIC_SUPABASE_URL=https://wnsbtruydlxzyycjiagn.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_eE5qPajwn4YkaS1btgt87g_NsDHo8ti
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=sb_publishable_eE5qPajwn4YkaS1btgt87g_NsDHo8ti
